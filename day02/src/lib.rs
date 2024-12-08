@@ -4,7 +4,7 @@ pub struct Report{
     levels: Vec<u32>
 }
 
-pub fn calcualte_safe_reports(path: &str) -> Result<u32, String>{
+pub fn calculate_safe_reports(path: &str) -> Result<u32, String>{
     let reports = read_reports(path)?;
     let mut sum = 0;
     for report in reports{
@@ -15,36 +15,36 @@ pub fn calcualte_safe_reports(path: &str) -> Result<u32, String>{
     Ok(sum)
 }
 
+pub fn calculate_safe_reports_with_daper(path: &str, damper: u32) -> Result<u32, String>{
+    Ok(1)
+}
+
 fn evaluate_report(report: Report) -> bool{
-    let mut previous: u32;
+    let mut current = 0;
+    let mut next = 1;
     let mut increasing = false;
-    let mut decreasing = false;
-    for (pos, level) in report.levels.iter().enumerate(){
-        if pos == 0{
-            continue;
+    while next < report.levels.len(){
+        let current_value = report.levels[current];
+        let next_value = report.levels[next];
+        if current == 0{
+            increasing = current_value < next_value;
         }
-        previous = report.levels[pos-1];
-        
-        // diff outside of 1 and 3 is unsafe
-        let diff = level.abs_diff(previous);
-        if diff < 1 || diff > 3 {
+        let diff = current_value.abs_diff(next_value) ;
+        if diff < 1 || diff > 3{
             return false
         }
-
-        if pos == 1 {
-            decreasing = previous > *level;
-            increasing = previous < *level;
-            continue;
+        if increasing && current_value > next_value{
+            return false
         }
-        if decreasing && previous < *level {
-            return false;
+        if !increasing && current_value < next_value{
+            return false
         }
-        if increasing && previous > *level{
-            return false;
-        }
+        current = next;
+        next += 1
     }
     true
 }
+
 
 fn read_reports(path: &str) -> Result<Vec<Report>, String>{
     let mut reports = Vec::new();
