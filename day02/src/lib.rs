@@ -19,32 +19,45 @@ pub fn calculate_safe_reports_with_daper(path: &str, damper: u32) -> Result<u32,
     Ok(1)
 }
 
-fn evaluate_report(report: Report) -> bool{
-    let mut current = 0;
-    let mut next = 1;
-    let mut increasing = false;
-    while next < report.levels.len(){
-        let current_value = report.levels[current];
-        let next_value = report.levels[next];
-        if current == 0{
-            increasing = current_value < next_value;
-        }
-        let diff = current_value.abs_diff(next_value) ;
-        if diff < 1 || diff > 3{
-            return false
-        }
-        if increasing && current_value > next_value{
-            return false
-        }
-        if !increasing && current_value < next_value{
-            return false
-        }
-        current = next;
-        next += 1
-    }
-    true
+struct Eval {
+    increasing: bool,
+    ok: bool
 }
 
+fn evaluate_report(report: Report) -> bool{
+    
+    if report.levels.len() < 2{
+        return true;
+    }
+
+    let mut evals: Vec<Eval> = Vec::new();
+    for i in 0..report.levels.len()-1 {
+        let current = report.levels[i];
+        let next = report.levels[i+1];
+        let eval = evaluate(current, next);
+        evals.push(eval);
+    }
+
+    let increasing = evals[0].increasing;
+    let mut faults = 0;
+    for eval in evals{
+        if eval.increasing != increasing{
+            faults += 1;
+        }
+        if !eval.ok{
+            faults += 1;
+        }
+    }
+    faults == 0
+}
+
+fn evaluate(current: u32, next: u32) -> Eval {
+    let diff = current.abs_diff(next);
+    Eval{
+        increasing: current < next,
+        ok: 1 <= diff && diff <= 3,
+    }    
+}
 
 fn read_reports(path: &str) -> Result<Vec<Report>, String>{
     let mut reports = Vec::new();
