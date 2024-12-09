@@ -15,7 +15,7 @@ pub fn calculate_safe_reports(path: &str) -> Result<u32, String>{
     Ok(sum)
 }
 
-pub fn calculate_safe_reports_with_daper(path: &str, damper: u32) -> Result<u32, String>{
+pub fn calculate_safe_reports_with_damper(path: &str, damper: u32) -> Result<u32, String>{
     Ok(1)
 }
 
