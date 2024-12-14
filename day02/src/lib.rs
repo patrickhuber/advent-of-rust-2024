@@ -1,62 +1,22 @@
 use std::{fs::File, io::{BufRead, BufReader}};
 
 pub struct Report{
-    levels: Vec<u32>
+    levels: Vec<i32>
 }
 
-pub fn calculate_safe_reports(path: &str) -> Result<u32, String>{
+pub fn calculate_safe_reports(path: &str, damper: bool) -> Result<i32, String>{
     let reports = read_reports(path)?;
-    let mut sum = 0;
+    let mut safe_count = 0;
     for report in reports{
-        if evaluate_report(report) {
-            sum += 1;
+        print!("{:?}", report.levels);
+        if evaluate_report(report, damper) {
+            safe_count += 1;
+            println!(" // Safe");
+        }else{
+            println!(" // Unsafe");
         }
     }
-    Ok(sum)
-}
-
-pub fn calculate_safe_reports_with_damper(path: &str, damper: u32) -> Result<u32, String>{
-    Ok(1)
-}
-
-struct Eval {
-    increasing: bool,
-    ok: bool
-}
-
-fn evaluate_report(report: Report) -> bool{
-    
-    if report.levels.len() < 2{
-        return true;
-    }
-
-    let mut evals: Vec<Eval> = Vec::new();
-    for i in 0..report.levels.len()-1 {
-        let current = report.levels[i];
-        let next = report.levels[i+1];
-        let eval = evaluate(current, next);
-        evals.push(eval);
-    }
-
-    let increasing = evals[0].increasing;
-    let mut faults = 0;
-    for eval in evals{
-        if eval.increasing != increasing{
-            faults += 1;
-        }
-        if !eval.ok{
-            faults += 1;
-        }
-    }
-    faults == 0
-}
-
-fn evaluate(current: u32, next: u32) -> Eval {
-    let diff = current.abs_diff(next);
-    Eval{
-        increasing: current < next,
-        ok: 1 <= diff && diff <= 3,
-    }    
+    Ok(safe_count)
 }
 
 fn read_reports(path: &str) -> Result<Vec<Report>, String>{
@@ -69,10 +29,88 @@ fn read_reports(path: &str) -> Result<Vec<Report>, String>{
             levels: Vec::new()
         };
         for (_, level) in line.split_whitespace().enumerate(){
-            let value = level.parse::<u32>().map_err(|e|e.to_string())?;
+            let value = level.parse::<i32>().map_err(|e|e.to_string())?;
             report.levels.push(value);
         }
         reports.push(report);
     }
     return Ok(reports)
+}
+
+fn evaluate_report(report: Report, damper: bool) -> bool{    
+    if report.levels.len() < 2{
+        return true;
+    }
+    let diffs = diffs(report);
+    let err = find_error(&diffs);
+    if err.is_none() {
+        return true;
+    }
+    if !damper{
+        return false;
+    }
+    let err_index = err.unwrap();
+    
+    if err_index > 0{
+        let left = merge(&diffs, err_index-1);
+        if find_error(&left).is_none(){
+            return true;
+        }
+    }
+    if err_index < diffs.len() -1{
+        let right = merge(&diffs, err_index);
+        if find_error(&right).is_none(){
+            return true;
+        }
+    }
+    if err_index <= 1 {
+        if find_error(&diffs[1..]).is_none(){
+            return true;
+        }
+    }
+    if err_index >= diffs.len() -2 {
+        if find_error(&diffs[..diffs.len()-1]).is_none(){
+            return true;
+        }
+    }
+    false
+}
+
+fn merge(diffs: &Vec<i32>, index: usize) -> Vec<i32>{
+    let mut result = Vec::new();
+    for i in 0.. diffs.len(){
+        if i == index{
+            result.push(diffs[i]+diffs[i+1]);
+            continue;
+        }
+        if i == index+1{
+            continue;
+        }
+        result.push(diffs[i]);
+    }
+    return result;
+}
+
+fn diffs(report: Report) -> Vec<i32>{
+    let mut diffs = Vec::new();
+    for i in 1.. report.levels.len(){
+        let left = report.levels[i-1];
+        let right = report.levels[i];
+        let diff = left - right;
+        diffs.push(diff);
+    }
+    diffs
+}
+
+fn find_error(diffs: &[i32])->Option<usize>{   
+    let increasing = diffs[0] < 0;
+    let mut index = 0;
+    for diff in diffs{
+        let abs_diff = diff.abs();
+        if abs_diff < 1 || abs_diff > 3 || increasing != (*diff < 0){
+            return Some(index);
+        }
+        index += 1;
+    }
+    return None;
 }
