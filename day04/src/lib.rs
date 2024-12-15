@@ -16,6 +16,36 @@ pub fn count_xmas(path: &str) -> Result<i32, String>{
     Ok(sum)
 }
 
+pub fn count_masx(path: &str)->Result<i32, String>{
+    let content = read_to_string(path).map_err(|x|x.to_string())?;
+    let grid = read_grid(content.lines().collect());
+    let mut sum:i32 = 0;
+
+    for r in 1..grid.len()-1{
+        for c in 1..grid[r].len()-1{
+            if grid[c][r] != 'A'{
+                continue;
+            }
+            let left_top = grid[c-1][r-1];
+            let right_top = grid[c+1][r-1];
+            let left_bottom = grid[c-1][r+1];
+            let right_bottom = grid[c+1][r+1];
+            match (left_top, right_bottom) {
+                ('M', 'S')=>{}
+                ('S', 'M')=>{}
+                _=>{ continue ; }
+            }
+            match(left_bottom, right_top){
+                ('M', 'S')=>{}
+                ('S', 'M')=>{}
+                _=> {continue;}
+            }
+            sum += 1;
+        }        
+    }   
+    Ok(sum)
+}
+
 fn in_window(grid: &Vec<Vec<char>>, search: &Vec<char>, col:usize, row: usize)-> i32{
     let col_i32 = i32::try_from(col).unwrap();
     let row_i32 = i32::try_from(row).unwrap();
