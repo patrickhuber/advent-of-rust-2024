@@ -13,9 +13,3 @@ fn day04a() -> Result<(), String>{
     assert_eq!(count, 2521);
     Ok(())
 }
-
-#[test]
-fn splat(){
-    let v: Vec<char> = "XMAS".chars().collect();
-    println!("{:?}", v)
-}
