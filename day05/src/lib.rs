@@ -10,6 +10,12 @@ struct Page {
     updates: Vec<Vec<i32>>,
 }
 
+pub fn get_sum_of_mid(path: &str) -> Result<i32,String>{
+    let page = read_file(path)?;
+    
+    Ok(1)
+}
+
 fn read_file(path: &str) -> Result<Page,String>{
     let file = File::open(path).map_err(|e|e.to_string())?;
     let mut reader = BufReader::new(file);
@@ -43,5 +49,21 @@ fn read_orders(reader: &mut BufReader<File>)-> Result<Vec<Order>, String>{
 }
 
 fn read_updates(reader: &mut BufReader<File>) -> Result<Vec<Vec<i32>>, String>{
-    Ok(Vec::new())
+    let mut buf = String::new();
+    let mut updates = Vec::new();
+    loop{
+        let result = &reader.read_line(&mut buf).map_err(|x|x.to_string())?;
+        if *result == 0{
+            break;
+        }
+        if buf.len() == 0{
+            break;
+        }
+        let splits = buf
+            .split(',')
+            .map(|x|x.parse::<i32>().unwrap())
+            .collect();
+        updates.push(splits);
+    }
+    Ok(updates)
 }
