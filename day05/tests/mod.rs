@@ -8,6 +8,8 @@ fn day05a_example() -> Result<(), String>{
 }
 
 #[test]
-fn day05a(){
-
+fn day05a()-> Result<(), String>{
+    let sum = get_sum_of_mid("tests/input.txt")?;
+    assert_eq!(sum, 143);
+    Ok(())
 }

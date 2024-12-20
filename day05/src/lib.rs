@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufRead, BufReader}};
+use std::{collections::{HashMap,HashSet}, fs::File, io::{BufRead, BufReader}};
 
 struct Order {
     left: i32,
@@ -11,12 +11,53 @@ struct Page {
 }
 
 pub fn get_sum_of_mid(path: &str) -> Result<i32,String>{
-    let page = read_file(path)?;
-    
-    Ok(1)
+    let page = read_page(path)?;
+    let mut lookup = HashMap::<i32, HashSet<i32>>::new();
+
+    // organize the orders
+    for order in page.orders{
+        lookup.entry(order.left)
+            .or_default()
+            .insert(order.right);
+    }
+
+    let mut sum = 0;
+    // loop over the updates and look for out of order updates
+    for update in page.updates{
+        // skip over non ordered updates
+        if !is_ordered(&update, &lookup){
+            continue;
+        }
+        // find the mid point
+        let mid = update.len()/2;
+        sum += update[mid];
+    }
+
+    Ok(sum)
 }
 
-fn read_file(path: &str) -> Result<Page,String>{
+fn is_ordered(update: &Vec<i32>, lookup: &HashMap<i32,HashSet<i32>>)-> bool{
+    for index in 0..update.len()-1{
+        // look for rule violations where index+1 appears before index in the lookup table
+        let left = update[index];
+        let right = update[index+1];
+        match lookup.get(&right){
+            Some(set)=>{
+                match set.get(&left){
+                    Some(_)=>{
+                        // we have a violation
+                        return false;
+                    }
+                    None=>{ continue; }
+                }
+            }
+            None=>{ continue;}
+        }
+    }
+    true
+}
+
+fn read_page(path: &str) -> Result<Page,String>{
     let file = File::open(path).map_err(|e|e.to_string())?;
     let mut reader = BufReader::new(file);
     let orders = read_orders(&mut reader)?;
@@ -31,9 +72,16 @@ fn read_orders(reader: &mut BufReader<File>)-> Result<Vec<Order>, String>{
     let mut buf = String::new();
     let mut orders = Vec::new();
     loop{ 
+        buf.clear();
         let result = &reader.read_line(&mut buf).map_err(|x|x.to_string())?;
         if *result == 0{
             break;
+        }
+        if buf.ends_with('\n'){         
+            buf.pop();            
+            if buf.ends_with('\r'){
+                buf.pop();
+            }
         }
         if buf.len() == 0{
             break;
@@ -52,9 +100,16 @@ fn read_updates(reader: &mut BufReader<File>) -> Result<Vec<Vec<i32>>, String>{
     let mut buf = String::new();
     let mut updates = Vec::new();
     loop{
+        buf.clear();
         let result = &reader.read_line(&mut buf).map_err(|x|x.to_string())?;
         if *result == 0{
             break;
+        }
+        if buf.ends_with('\n'){         
+            buf.pop();            
+            if buf.ends_with('\r'){
+                buf.pop();
+            }
         }
         if buf.len() == 0{
             break;
