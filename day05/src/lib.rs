@@ -10,7 +10,75 @@ struct Page {
     updates: Vec<Vec<i32>>,
 }
 
-pub fn get_sum_of_mid(path: &str) -> Result<i32,String>{
+pub fn get_sum_of_mid_after_reorder(path: &str) ->Result<i32, String>{
+    let page = read_page(path)?;
+    let mut lookup = HashMap::<i32, HashSet<i32>>::new();
+
+    // organize the orders
+    for order in page.orders{
+        lookup.entry(order.left)
+            .or_default()
+            .insert(order.right);
+    }
+
+    let mut sum = 0;    
+    // loop over the updates and look for out of order updates
+    for update in page.updates{
+        if is_ordered(&update, &lookup){
+            continue;
+        }
+        let mut owned = update.to_vec();
+        sort(&mut owned,  &lookup);
+
+        // find the mid point
+        let mid = owned.len()/2;
+        sum += owned[mid];
+    }
+    Ok(sum)
+}
+
+fn sort(update: &mut Vec<i32>, lookup: &HashMap<i32, HashSet<i32>>){
+    
+    // arrays of 0 or 1 are already sorted
+    if update.len() <=1{
+        return
+    }
+
+    // track an index in the array, backtrack if a swap occurs
+    let mut index = 0;
+    while index < update.len()-1{
+        let left = update[index];
+        let right = update[index+1];
+        
+        if in_order(left, right, lookup){
+            index+=1;
+            continue;
+        }
+        
+        swap(update, index, index+1);
+        if index == 0{
+            continue;
+        }
+        
+        index -= 1;        
+    }
+}
+
+fn swap(update: &mut Vec<i32>, left: usize, right: usize){
+    let temp = update[left];
+    update[left] = update[right];
+    update[right] = temp;    
+}
+
+fn in_order(left: i32, right: i32, lookup: &HashMap<i32, HashSet<i32>>) -> bool{    
+    let right_lookup = lookup.get(&right);
+    if right_lookup.is_none(){
+        return true;
+    }
+    return right_lookup.unwrap().get(&left).is_none();
+}
+
+pub fn get_sum_of_mid_correctly_ordered(path: &str) -> Result<i32,String>{
     let page = read_page(path)?;
     let mut lookup = HashMap::<i32, HashSet<i32>>::new();
 
@@ -41,17 +109,8 @@ fn is_ordered(update: &Vec<i32>, lookup: &HashMap<i32,HashSet<i32>>)-> bool{
         // look for rule violations where index+1 appears before index in the lookup table
         let left = update[index];
         let right = update[index+1];
-        match lookup.get(&right){
-            Some(set)=>{
-                match set.get(&left){
-                    Some(_)=>{
-                        // we have a violation
-                        return false;
-                    }
-                    None=>{ continue; }
-                }
-            }
-            None=>{ continue;}
+        if !in_order(left, right, lookup){
+            return false
         }
     }
     true
